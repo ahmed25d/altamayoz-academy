@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكاديمية التميز - منصة التعلم الذكية | Altamayoz Academy</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- PDF.js library for true browser-side PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <!-- Google Fonts Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; overflow-x: hidden; }
+        @keyframes ticker {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .animate-ticker {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 35s linear infinite;
+        }
+        .animate-ticker:hover { animation-play-state: paused; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const schoolGradesList = [
+            "كي جي 1", "كي جي 2", "أول ابتدائي", "ثاني ابتدائي", "ثالث ابتدائي",
+            "رابع ابتدائي", "خامس ابتدائي", "سادس ابتدائي", "أول إعدادي", "ثاني إعدادي", "ثالث إعدادي"
+        ];
+
+        const translations = {
+            ar: {
+                appName: "أكاديمية التميز",
+                appSubName: "منصة التعلم الذكية",
+                roleAdmin: "مدير النظام",
+                roleTeacher: "المعلمة: سارة الأحمدي",
+                roleStudent: "الطالب: عمر حسان",
+                langToggle: "English",
+                navDashboard: "لوحة التحكم",
+                navSubjects: "المواد الدراسية",
+                navAssignments: "واجباتي واختباراتي",
+                navMaterials: "المكتبة التعليمية",
+                navGrading: "سجل الدرجات",
+                navAnnouncements: "الإعلانات",
+                navAdmin: "إدارة النظام",
+                welcomeBack: "مرحباً بعودتك إلى أكاديمية التميز،",
+                assignmentsTitle: "واجباتي واختباراتي التفاعلية",
+                announcementsTitle: "الإعلانات المدرسية",
+                announcementsSub: "التنبيهات والمستندات المرفقة",
+                addAnnouncement: "+ إضافة إعلان جديد",
+                addAssignment: "+ إنشاء واجب أو اختبار جديد",
+                addTeacher: "+ إضافة معلم جديد",
+                addStudent: "+ إضافة طالب جديد",
+                addSubject: "+ إضافة مادة",
+                studentName: "اسم الطالب",
+                schoolYear: "السنة الدراسية",
+                participation: "المشاركة (10)",
+                assignmentsCol: "الواجبات (20)",
+                behavior: "السلوك (10)",
+                termExam: "اختبار الترم (50)",
+                total: "المجموع (100)",
+                subjectCol: "المادة",
+                teacherCol: "المعلم",
+                actions: "الإجراءات",
+                cancel: "إلغاء",
+                save: "حفظ",
+                newsBar: "أخبار الأكاديمية"
+            },
+            en: {
+                appName: "Altamayoz Academy",
+                appSubName: "Smart Learning Platform",
+                roleAdmin: "Administrator",
+                roleTeacher: "Teacher: Ms. Sarah",
+                roleStudent: "Student: Omar Hassan",
+                langToggle: "العربية",
+                navDashboard: "Dashboard",
+                navSubjects: "Subjects",
+                navAssignments: "Assignments",
+                navMaterials: "Materials",
+                navGrading: "Gradebook",
+                navAnnouncements: "Announcements",
+                navAdmin: "Admin Panel",
+                welcomeBack: "Welcome back to Altamayoz Academy,",
+                assignmentsTitle: "Interactive Assignments & Quizzes",
+                announcementsTitle: "School Announcements",
+                announcementsSub: "Notifications and attached documents",
+                addAnnouncement: "+ Add New Announcement",
+                addAssignment: "+ Create New Assignment or Quiz",
+                addTeacher: "+ Add New Teacher",
+                addStudent: "+ Add Student",
+                addSubject: "+ Add Subject",
+                studentName: "Student Name",
+                schoolYear: "Academic Year",
+                participation: "Participation (10)",
+                assignmentsCol: "Assignments (20)",
+                behavior: "Behavior (10)",
+                termExam: "Term Exam (50)",
+                total: "Total (100)",
+                subjectCol: "Subject",
+                teacherCol: "Teacher",
+                actions: "Actions",
+                cancel: "Cancel",
+                save: "Save",
+                newsBar: "Academy News"
+            }
+        };
+
+        const defaultSubjects = [
+            { id: 'sub-1', nameAr: 'اللغة العربية', nameEn: 'Arabic Language', code: 'ARA101', color: 'from-red-600 via-rose-600 to-amber-500', badgeColor: 'bg-red-500/20 text-red-300 border-red-500/30' },
+            { id: 'sub-2', nameAr: 'الرياضيات', nameEn: 'Mathematics', code: 'MATH201', color: 'from-blue-600 via-indigo-600 to-sky-500', badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+            { id: 'sub-3', nameAr: 'اللغة الإنجليزية', nameEn: 'English Language', code: 'ENG102', color: 'from-amber-500 via-yellow-500 to-blue-600', badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
+            { id: 'sub-4', nameAr: 'العلوم العامة', nameEn: 'General Science', code: 'SCI301', color: 'from-blue-700 via-sky-600 to-yellow-400', badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
+            { id: 'sub-5', nameAr: 'الدراسات الاجتماعية', nameEn: 'Social Studies', code: 'SOC105', color: 'from-red-700 via-red-600 to-amber-500', badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/30' }
+        ];
+
+        const defaultTeachers = [
+            { id: 't-1', name: 'أ. سارة الأحمدي', subject: 'اللغة العربية', grades: ['أول ابتدائي', 'ثاني ابتدائي'], username: 'sara_teacher', password: '123' },
+            { id: 't-2', name: 'أ. محمد خالد', subject: 'الرياضيات', grades: ['سادس ابتدائي'], username: 'm_khaled', password: '123' },
+            { id: 't-3', name: 'علي احمد مرسي', subject: 'الدراسات الاجتماعية', grades: ['خامس ابتدائي', 'سادس ابتدائي'], username: 'ali_morsi', password: '123' }
+        ];
+
+        const defaultStudents = [
+            { id: 'st-1', name: 'عمر حسان', grade: 'سادس ابتدائي', username: 'omar_hassan', password: '123', subject: 'الرياضيات', teacher: 'أ. محمد خالد', participation: 10, assignments: 18, behavior: 10, termExam: 48 },
+            { id: 'st-2', name: 'أحمد علي', grade: 'خامس ابتدائي', username: 'ahmed_ali', password: '123', subject: 'اللغة العربية', teacher: 'أ. سارة الأحمدي', participation: 9, assignments: 17, behavior: 10, termExam: 45 },
+            { id: 'st-3', name: 'سامر ابراهيم فرغلي', grade: 'سادس ابتدائي', username: 'sibrahim', password: '123', subject: 'الدراسات الاجتماعية', teacher: 'علي احمد مرسي', participation: 10, assignments: 20, behavior: 10, termExam: 50 }
+        ];
+
+        const defaultAnnouncements = [
+            { id: 'ann-1', title: '📢 بدء تسجيل واجبات واختبارات منتصف الفصل', content: 'أعزائنا الطلاب، يرجى الالتزام بمواعيد تسليم الواجبات عبر المنصة للتقييم الأسبوعي.', attachmentName: 'جدول والاختبارات.pdf', date: '2026-10-24', startDate: '2026-10-24T08:00', endDate: '2026-11-01T23:59' },
+            { id: 'ann-2', title: '⭐ مسابقة التفوق العلمي لأكاديمية التميز', content: 'نلفت عناية طلابنا الأعزاء إلى انطلاق مسابقة التميز العلمية يوم الخميس القادم.', attachmentName: '', date: '2026-10-25', startDate: '2026-10-25T08:00', endDate: '2026-11-05T23:59' }
+        ];
+
+        const defaultAssignments = [
+            {
+                id: 'asg-1',
+                titleAr: 'الرفع في الأسماء و الافعال',
+                startDate: '2026-10-24T08:00',
+                endDate: '2026-11-02T23:59',
+                questions: [
+                    { id: 'q-1', type: 'MCQ', textAr: 'الفعل المضارع يرفع إذا لم يسبقه:', optionsAr: ['ناصب أو جازم', 'حرف جر', 'حرف عطف', 'لا شيء'], correctOptionIndex: 0 },
+                    { id: 'q-2', type: 'TF', textAr: 'المبتدأ والخبر مرفوعان دائماً.', trueFalseAnswer: true }
+                ]
+            }
+        ];
+
+        const lettersList = ['أ', 'ب', 'ج', 'د', 'هـ', 'و', 'ز', 'ح'];
+
+        function App() {
+            const [lang, setLang] = useState('ar');
+            const [role, setRole] = useState('Teacher'); 
+            const [activeTab, setActiveTab] = useState('assignments');
+
+            const [subjects, setSubjects] = useState(() => JSON.parse(localStorage.getItem('altamayoz_subjects')) || defaultSubjects);
+            const [teachersList, setTeachersList] = useState(() => JSON.parse(localStorage.getItem('altamayoz_teachers')) || defaultTeachers);
+            const [studentsList, setStudentsList] = useState(() => JSON.parse(localStorage.getItem('altamayoz_students')) || defaultStudents);
+            const [announcements, setAnnouncements] = useState(() => JSON.parse(localStorage.getItem('altamayoz_announcements')) || defaultAnnouncements);
+            const [assignments, setAssignments] = useState(() => JSON.parse(localStorage.getItem('altamayoz_assignments')) || defaultAssignments);
+
+            useEffect(() => { localStorage.setItem('altamayoz_subjects', JSON.stringify(subjects)); }, [subjects]);
+            useEffect(() => { localStorage.setItem('altamayoz_teachers', JSON.stringify(teachersList)); }, [teachersList]);
+            useEffect(() => { localStorage.setItem('altamayoz_students', JSON.stringify(studentsList)); }, [studentsList]);
+            useEffect(() => { localStorage.setItem('altamayoz_assignments', JSON.stringify(assignments)); }, [assignments]);
+            useEffect(() => { localStorage.setItem('altamayoz_announcements', JSON.stringify(announcements)); }, [announcements]);
+
+            const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+            useEffect(() => {
+                if (announcements.length === 0) return;
+                const timer = setInterval(() => {
+                    setCurrentBannerIndex(prev => (prev + 1) % announcements.length);
+                }, 6000);
+                return () => clearInterval(timer);
+            }, [announcements]);
+
+            const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
+            const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+            const [showAddTeacherModal, setShowAddTeacherModal] = useState(false);
+            const [showAddAnnouncementModal, setShowAddAnnouncementModal] = useState(false);
+            const [showBuilderModal, setShowBuilderModal] = useState(false);
+
+            const [activeStudentAssignment, setActiveStudentAssignment] = useState(null);
+            const [studentAnswers, setStudentAnswers] = useState({});
+
+            const [newTeacherForm, setNewTeacherForm] = useState({ name: '', subject: 'الدراسات الاجتماعية', grades: ['خامس ابتدائي'], username: '', password: '123' });
+            const [newStudentForm, setNewStudentForm] = useState({ name: '', grade: 'سادس ابتدائي', username: '', password: '', subject: 'الرياضيات', teacher: 'أ. محمد خالد', participation: 10, assignments: 20, behavior: 10, termExam: 50 });
+            const [newSubjectForm, setNewSubjectForm] = useState({ nameAr: '', code: '' });
+            
+            const [editingAnnouncementId, setEditingAnnouncementId] = useState(null);
+            const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '', startDate: '2026-10-26T08:00', endDate: '2026-11-02T23:59', file: null, existingAttachmentName: '' });
+
+            const [editingAssignmentId, setEditingAssignmentId] = useState(null);
+            const [newAssignmentForm, setNewAssignmentForm] = useState({ titleAr: '', startDate: '2026-10-26T08:00', endDate: '2026-11-02T23:59', questions: [] });
+
+            const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+
+            const [showAiGenerator, setShowAiGenerator] = useState(false);
+            const [aiPrompt, setAiPrompt] = useState('');
+            const [aiQuestionCounts, setAiQuestionCounts] = useState({ MCQ: 2, TF: 1, SHORT: 0, ESSAY: 0, MATCHING: 0 });
+            const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+            // Import States
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [importText, setImportText] = useState('');
+            const [importFile, setImportFile] = useState(null);
+            const [isImporting, setIsImporting] = useState(false);
+            const [extractedImportQuestions, setExtractedImportQuestions] = useState([]);
+            const [importReviewMode, setImportReviewMode] = useState(false);
+
+            const [currentEditingQuestion, setCurrentEditingQuestion] = useState({
+                type: 'MCQ', textAr: '', optionsAr: ['', '', '', ''], correctOptionIndex: 0, trueFalseAnswer: true, shortAnswerModel: '', essayGuideModel: '',
+                matchingPairs: [{ id: 1, numberLabel: '1', rightText: '', leftLetter: 'أ', leftText: '', correctAnswerLetter: 'أ' }]
+            });
+
+            const [notification, setNotification] = useState(null);
+            const t = translations[lang];
+            const isRTL = lang === 'ar';
+
+            const triggerNotification = (msg) => {
+                setNotification(msg);
+                setTimeout(() => setNotification(null), 4000);
+            };
+
+            const handleGradeChange = (id, field, value) => {
+                setStudentsList(prev => prev.map(st => st.id === id ? { ...st, [field]: Number(value) } : st));
+            };
+
+            const handleAddTeacher = () => {
+                if (!newTeacherForm.name) return;
+                const created = { id: 't-' + Date.now(), name: newTeacherForm.name, subject: newTeacherForm.subject, grades: newTeacherForm.grades, username: newTeacherForm.username || 'teacher_' + Math.floor(Math.random()*1000), password: newTeacherForm.password || '123' };
+                setTeachersList(prev => [...prev, created]);
+                setShowAddTeacherModal(false);
+                setNewTeacherForm({ name: '', subject: 'الدراسات الاجتماعية', grades: ['خامس ابتدائي'], username: '', password: '123' });
+                triggerNotification(lang === 'ar' ? 'تمت إضافة المعلم بنجاح!' : 'Teacher added successfully!');
+            };
+
+            const handleRemoveTeacher = (id) => {
+                setTeachersList(prev => prev.filter(t => t.id !== id));
+                triggerNotification(lang === 'ar' ? 'تم حذف المعلم!' : 'Teacher removed!');
+            };
+
+            const handleAddStudentByAdmin = () => {
+                if (!newStudentForm.name) return;
+                const created = { id: 'st-' + Date.now(), name: newStudentForm.name, grade: newStudentForm.grade, username: newStudentForm.username || 'student_' + Math.floor(Math.random()*1000), password: newStudentForm.password || '123', subject: newStudentForm.subject || 'الرياضيات', teacher: newStudentForm.teacher || 'أ. محمد خالد', participation: Number(newStudentForm.participation), assignments: Number(newStudentForm.assignments), behavior: Number(newStudentForm.behavior), termExam: Number(newStudentForm.termExam) };
+                setStudentsList(prev => [...prev, created]);
+                setShowAddStudentModal(false);
+                setNewStudentForm({ name: '', grade: 'سادس ابتدائي', username: '', password: '', subject: 'الرياضيات', teacher: 'أ. محمد خالد', participation: 10, assignments: 20, behavior: 10, termExam: 50 });
+                triggerNotification(lang === 'ar' ? 'تمت إضافة الطالب بنجاح!' : 'Student added successfully!');
+            };
+
+            const handleRemoveStudent = (id) => {
+                setStudentsList(prev => prev.filter(s => s.id !== id));
+                triggerNotification(lang === 'ar' ? 'تم حذف الطالب!' : 'Student removed!');
+            };
+
+            const handleAddSubjectByAdmin = () => {
+                if (!newSubjectForm.nameAr || !newSubjectForm.code) return alert('يرجى إدخال اسم المادة والرمز');
+                const gradients = ['from-purple-600 via-indigo-600 to-pink-500', 'from-emerald-600 via-teal-600 to-cyan-500'];
+                const badges = ['bg-purple-500/20 text-purple-300 border-purple-500/30', 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'];
+                const randomIndex = Math.floor(Math.random() * gradients.length);
+                const newSubObj = { id: 'sub-' + Date.now(), nameAr: newSubjectForm.nameAr, nameEn: newSubjectForm.nameAr, code: newSubjectForm.code.toUpperCase(), color: gradients[randomIndex], badgeColor: badges[randomIndex] };
+                setSubjects([...subjects, newSubObj]);
+                setShowAddSubjectModal(false);
+                setNewSubjectForm({ nameAr: '', code: '' });
+                triggerNotification(lang === 'ar' ? 'تمت إضافة المادة بنجاح!' : 'Subject added successfully!');
+            };
+
+            const handleRemoveSubject = (id) => {
+                setSubjects(subjects.filter(s => s.id !== id));
+                triggerNotification(lang === 'ar' ? 'تم حذف المادة بنجاح!' : 'Subject removed!');
+            };
+
+            const handleSaveAnnouncement = () => {
+                if (!newAnnouncement.title || !newAnnouncement.content) return alert('يرجى كتابة عنوان وتفاصيل الإعلان');
+                const attachment = newAnnouncement.file ? newAnnouncement.file.name : (newAnnouncement.existingAttachmentName || '');
+                if (editingAnnouncementId) {
+                    setAnnouncements(announcements.map(ann => ann.id === editingAnnouncementId ? { ...ann, title: newAnnouncement.title, content: newAnnouncement.content, startDate: newAnnouncement.startDate, endDate: newAnnouncement.endDate, attachmentName: attachment } : ann));
+                    triggerNotification(lang === 'ar' ? 'تم تعديل الإعلان بنجاح!' : 'Announcement updated successfully!');
+                } else {
+                    const created = { id: 'ann-' + Date.now(), title: newAnnouncement.title, content: newAnnouncement.content, startDate: newAnnouncement.startDate, endDate: newAnnouncement.endDate, attachmentName: attachment, date: new Date().toISOString().split('T')[0] };
+                    setAnnouncements([created, ...announcements]);
+                    triggerNotification(lang === 'ar' ? 'تم نشر الإعلان بنجاح!' : 'Announcement published!');
+                }
+                setShowAddAnnouncementModal(false);
+                setEditingAnnouncementId(null);
+                setNewAnnouncement({ title: '', content: '', startDate: '2026-10-26T08:00', endDate: '2026-11-02T23:59', file: null, existingAttachmentName: '' });
+            };
+
+            const handleEditAnnouncement = (ann) => {
+                setEditingAnnouncementId(ann.id);
+                setNewAnnouncement({ title: ann.title || '', content: ann.content || '', startDate: ann.startDate || '2026-10-26T08:00', endDate: ann.endDate || '2026-11-02T23:59', file: null, existingAttachmentName: ann.attachmentName || '' });
+                setShowAddAnnouncementModal(true);
+            };
+
+            const handleDeleteAnnouncement = (id) => {
+                if (confirm(lang === 'ar' ? 'هل أنت تأكد من حذف هذا الإعلان؟' : 'Are you sure?')) {
+                    setAnnouncements(announcements.filter(ann => ann.id !== id));
+                    triggerNotification(lang === 'ar' ? 'تم حذف الإعلان بنجاح!' : 'Announcement deleted successfully!');
+                }
+            };
+
+            const handleAddMatchingPair = () => {
+                const count = currentEditingQuestion.matchingPairs.length;
+                if (count >= 8) return;
+                const newLetter = lettersList[count] || 'أ';
+                const newPair = { id: Date.now(), numberLabel: `${count + 1}`, rightText: '', leftLetter: newLetter, leftText: '', correctAnswerLetter: newLetter };
+                setCurrentEditingQuestion({ ...currentEditingQuestion, matchingPairs: [...currentEditingQuestion.matchingPairs, newPair] });
+            };
+
+            const handleRemoveMatchingPair = (index) => {
+                if (currentEditingQuestion.matchingPairs.length <= 1) return;
+                const updated = currentEditingQuestion.matchingPairs.filter((_, i) => i !== index);
+                const reindexed = updated.map((pair, idx) => ({ ...pair, numberLabel: `${idx + 1}`, leftLetter: lettersList[idx] || 'أ' }));
+                setCurrentEditingQuestion({ ...currentEditingQuestion, matchingPairs: reindexed });
+            };
+
+            const handleAddOrUpdateQuestionInAssignment = () => {
+                if (!currentEditingQuestion.textAr) return alert('يرجى كتابة نص السؤال أولاً');
+                let updatedQuestions = [...newAssignmentForm.questions];
+                if (editingQuestionIndex !== null) {
+                    updatedQuestions[editingQuestionIndex] = { ...currentEditingQuestion, id: updatedQuestions[editingQuestionIndex].id || ('q-' + Date.now()) };
+                    setEditingQuestionIndex(null);
+                    triggerNotification(lang === 'ar' ? 'تم تعديل السؤال بنجاح!' : 'Question updated!');
+                } else {
+                    updatedQuestions.push({ ...currentEditingQuestion, id: 'q-' + Date.now() });
+                    triggerNotification(lang === 'ar' ? 'تم إضافة السؤال بنجاح!' : 'Question added!');
+                }
+                setNewAssignmentForm({ ...newAssignmentForm, questions: updatedQuestions });
+                setCurrentEditingQuestion({ type: 'MCQ', textAr: '', optionsAr: ['', '', '', ''], correctOptionIndex: 0, trueFalseAnswer: true, shortAnswerModel: '', essayGuideModel: '', matchingPairs: [{ id: 1, numberLabel: '1', rightText: '', leftLetter: 'أ', leftText: '', correctAnswerLetter: 'أ' }] });
+            };
+
+            const handleEditExistingQuestion = (index) => {
+                const qToEdit = newAssignmentForm.questions[index];
+                setCurrentEditingQuestion({
+                    type: qToEdit.type || 'MCQ', textAr: qToEdit.textAr || '', optionsAr: qToEdit.optionsAr ? [...qToEdit.optionsAr] : ['', '', '', ''],
+                    correctOptionIndex: qToEdit.correctOptionIndex !== undefined ? qToEdit.correctOptionIndex : 0, trueFalseAnswer: qToEdit.trueFalseAnswer !== undefined ? qToEdit.trueFalseAnswer : true,
+                    shortAnswerModel: qToEdit.shortAnswerModel || '', essayGuideModel: qToEdit.essayGuideModel || '', matchingPairs: qToEdit.matchingPairs ? [...qToEdit.matchingPairs] : [{ id: 1, numberLabel: '1', rightText: '', leftLetter: 'أ', leftText: '', correctAnswerLetter: 'أ' }]
+                });
+                setEditingQuestionIndex(index);
+            };
+
+            const handleRemoveQuestionFromAssignment = (index) => {
+                const updatedQuestions = newAssignmentForm.questions.filter((_, i) => i !== index);
+                setNewAssignmentForm({ ...newAssignmentForm, questions: updatedQuestions });
+                if (editingQuestionIndex === index) setEditingQuestionIndex(null);
+                triggerNotification(lang === 'ar' ? 'تم حذف السؤال!' : 'Question removed!');
+            };
+
+            const handleGenerateAiQuestions = async () => {
+                if (!aiPrompt) return alert('يرجى كتابة وصف المفهوم أو البرومبت أولاً');
+                setIsAiGenerating(true);
+                try {
+                    const response = await fetch('/.netlify/functions/generate-questions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: aiPrompt, counts: aiQuestionCounts })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Failed to generate');
+                    setNewAssignmentForm(prev => ({ ...prev, questions: [...prev.questions, ...data.questions] }));
+                    triggerNotification(lang === 'ar' ? `✨ تم توليد الأسئلة بنجاح!` : `Successfully generated questions!`);
+                    setShowAiGenerator(false);
+                    setAiPrompt('');
+                } catch (err) {
+                    console.error('AI Error:', err);
+                    alert('خطأ في الاتصال بالخادم أو مفتاح API: ' + err.message);
+                } finally {
+                    setIsAiGenerating(false);
+                }
+            };
+
+            // TRUE PDF TEXT EXTRACTION VIA PDF.JS & SECURE NETLIFY FUNCTION
+            const handleProcessImportDocument = async () => {
+                if (!importText.trim() && !importFile) {
+                    return alert(lang === 'ar' ? 'يرجى لصق نص الأسئلة أو رفع ملف PDF أولاً.' : 'Please paste text or upload a PDF first.');
+                }
+                setIsImporting(true);
+                try {
+                    let fullExtractedText = importText;
+
+                    if (importFile) {
+                        if (importFile.type === 'application/pdf' || importFile.name.toLowerCase().endsWith('.pdf')) {
+                            const arrayBuffer = await importFile.arrayBuffer();
+                            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                            const pdfDoc = await loadingTask.promise;
+                            let pagesText = [];
+                            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                                const page = await pdfDoc.getPage(i);
+                                const textContent = await page.getTextContent();
+                                const pageStr = textContent.items.map(item => item.str).join(' ');
+                                pagesText.push(pageStr);
+                            }
+                            fullExtractedText += '\n\n' + pagesText.join('\n');
+                        } else {
+                            // Text file reader fallback
+                            const readerText = await new Promise((resolve) => {
+                                const r = new FileReader();
+                                r.onload = (e) => resolve(e.target.result);
+                                r.onerror = () => resolve('');
+                                r.readAsText(importFile, 'UTF-8');
+                            });
+                            fullExtractedText += '\n\n' + readerText;
+                        }
+                    }
+
+                    // Call secure Netlify serverless function to parse questions cleanly
+                    const response = await fetch('/.netlify/functions/generate-questions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rawText: fullExtractedText })
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Failed to parse document text');
+
+                    const formattedExtracted = (data.questions || []).map((q, idx) => ({
+                        ...q,
+                        id: 'q-import-' + Date.now() + '-' + idx,
+                        selected: true,
+                        textAr: q.textAr || 'سؤال مستورد',
+                        type: q.type || 'MCQ',
+                        optionsAr: q.optionsAr || ['خيار 1', 'خيار 2', 'خيار 3', 'خيار 4'],
+                        correctOptionIndex: q.correctOptionIndex !== undefined ? q.correctOptionIndex : 0,
+                        trueFalseAnswer: q.trueFalseAnswer !== undefined ? q.trueFalseAnswer : true
+                    }));
+
+                    setExtractedImportQuestions(formattedExtracted);
+                    setImportReviewMode(true);
+                    triggerNotification(lang === 'ar' ? `📥 تم استخراج ${formattedExtracted.length} سؤالاً بنجاح!` : `Extracted ${formattedExtracted.length} questions!`);
+                } catch (err) {
+                    console.error('Import Error:', err);
+                    alert('حدث خطأ أثناء معالجة وقراءة المستند: ' + err.message);
+                } finally {
+                    setIsImporting(false);
+                }
+            };
+
+            const handleImportApprovedQuestions = () => {
+                const approved = extractedImportQuestions.filter(q => q.selected);
+                if (approved.length === 0) return alert('يرجى تحديد سؤال واحد على الأقل.');
+                const cleaned = approved.map(({ selected, ...rest }) => ({ ...rest, id: 'q-imported-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5) }));
+                setNewAssignmentForm(prev => ({ ...prev, questions: [...prev.questions, ...cleaned] }));
+                triggerNotification(lang === 'ar' ? `✨ تم استيراد ${cleaned.length} سؤالاً بنجاح!` : `Successfully imported ${cleaned.length} questions!`);
+                setShowImportModal(false);
+                setImportReviewMode(false);
+                setImportText('');
+                setImportFile(null);
+                setExtractedImportQuestions([]);
+            };
+
+            const handleSaveAssignment = () => {
+                if (!newAssignmentForm.titleAr) return alert('يرجى كتابة عنوان الواجب أولاً');
+                if (editingAssignmentId) {
+                    setAssignments(assignments.map(asg => asg.id === editingAssignmentId ? { ...asg, ...newAssignmentForm } : asg));
+                    triggerNotification(lang === 'ar' ? 'تم تعديل الواجب بنجاح!' : 'Assignment updated!');
+                } else {
+                    setAssignments([{ id: 'asg-' + Date.now(), ...newAssignmentForm }, ...assignments]);
+                    triggerNotification(lang === 'ar' ? 'تم نشر الواجب بنجاح!' : 'Assignment published!');
+                }
+                setShowBuilderModal(false);
+                setEditingAssignmentId(null);
+                setEditingQuestionIndex(null);
+                setNewAssignmentForm({ titleAr: '', startDate: '2026-10-26T08:00', endDate: '2026-11-02T23:59', questions: [] });
+            };
+
+            const handleEditAssignment = (asg) => {
+                setEditingAssignmentId(asg.id);
+                setEditingQuestionIndex(null);
+                setNewAssignmentForm({ titleAr: asg.titleAr || '', startDate: asg.startDate || '2026-10-26T08:00', endDate: asg.endDate || '2026-11-02T23:59', questions: asg.questions ? [...asg.questions] : [] });
+                setShowBuilderModal(true);
+            };
+
+            const handleDeleteAssignment = (id) => {
+                if (confirm('هل أنت متأكد من حذف هذا الواجب؟')) {
+                    setAssignments(assignments.filter(asg => asg.id !== id));
+                    triggerNotification('تم حذف الواجب!');
+                }
+            };
+
+            const handleOpenAssignmentForStudent = (asg) => {
+                if (!asg.questions || asg.questions.length === 0) return alert('لا توجد أسئلة بعد.');
+                setActiveStudentAssignment(asg);
+                setStudentAnswers({});
+            };
+
+            const handleSubmitStudentAssignment = () => {
+                setActiveStudentAssignment(null);
+                setStudentAnswers({});
+                triggerNotification('تم تسليم إجابات الواجب بنجاح!');
+            };
+
+            const filteredStudents = role === 'Student' ? studentsList.filter(s => s.name === 'عمر حسان') : studentsList;
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans bg-slate-950 text-slate-100" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <div className="bg-gradient-to-r from-red-600 via-blue-600 to-yellow-500 text-white text-[11px] sm:text-xs font-bold py-2 px-3 overflow-hidden shadow-lg flex items-center border-b border-red-500/40">
+                        <span className="bg-yellow-400 text-slate-950 px-2.5 py-0.5 rounded-md text-[10px] font-black shrink-0 z-10 mx-2 shadow">📢 {t.newsBar}</span>
+                        <div className="overflow-hidden w-full relative">
+                            <div className="animate-ticker space-x-8 space-x-reverse">
+                                {announcements.map((ann, i) => (
+                                    <span key={i} className="inline-block px-3 font-bold text-yellow-100">🔴 {ann.title}: <span className="text-white">{ann.content}</span></span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-blue-900/50 shadow-xl">
+                        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div className="flex items-center justify-between w-full sm:w-auto">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="bg-gradient-to-tr from-red-600 via-yellow-500 to-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-500/20">🎓</div>
+                                    <div>
+                                        <h1 className="text-lg sm:text-2xl font-black text-yellow-400 leading-tight">{t.appName}</h1>
+                                        <p className="text-[10px] sm:text-xs text-blue-200/90 font-bold">{t.appSubName}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="sm:hidden bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg">🌐 {t.langToggle}</button>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-0 border-slate-800/80 pt-2 sm:pt-0">
+                                <select value={role} onChange={(e) => { setRole(e.target.value); if (e.target.value === 'Student' && activeTab === 'adminPanel') setActiveTab('grading'); }} className="bg-slate-800 text-slate-100 border border-blue-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold cursor-pointer">
+                                    <option value="Teacher">{t.roleTeacher}</option>
+                                    <option value="Admin">{t.roleAdmin}</option>
+                                    <option value="Student">{t.roleStudent}</option>
+                                </select>
+                                <button onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} className="hidden sm:block bg-gradient-to-r from-red-600 to-blue-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold shadow-md">🌐 {t.langToggle}</button>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-950/90 border-t border-slate-800">
+                            <div className="max-w-7xl mx-auto px-3 flex items-center gap-1 overflow-x-auto py-1.5">
+                                {[
+                                    ...(role === 'Admin' ? [{ id: 'adminPanel', label: t.navAdmin, icon: '⚙️' }] : []),
+                                    { id: 'assignments', label: t.navAssignments, icon: '📝' },
+                                    { id: 'dashboard', label: t.navDashboard, icon: '🌟' },
+                                    { id: 'subjects', label: t.navSubjects, icon: '📚' },
+                                    { id: 'grading', label: t.navGrading, icon: '📊' },
+                                    { id: 'announcements', label: t.navAnnouncements, icon: '📢' },
+                                ].map((tab) => (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-gradient-to-r from-red-600 to-yellow-500 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                                        <span>{tab.icon}</span><span>{tab.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </header>
+
+                    {notification && (
+                        <div className="fixed bottom-4 right-4 z-50 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-2xl border border-yellow-400 flex items-center gap-2 text-xs font-bold animate-bounce">
+                            <span>✨</span><p>{notification}</p>
+                        </div>
+                    )}
+
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+                        {announcements.length > 0 && (
+                            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-700 via-red-600 to-yellow-500 p-5 sm:p-6 shadow-2xl border border-yellow-400/50 min-h-[170px] flex flex-col justify-between">
+                                <div className="flex justify-between items-center">
+                                    <span className="bg-slate-950/70 px-3 py-1 rounded-full text-[10px] font-black text-yellow-300">📢 {currentBannerIndex + 1} / {announcements.length}</span>
+                                    <span className="text-[10px] text-yellow-100 font-bold">{announcements[currentBannerIndex].date}</span>
+                                </div>
+                                <div className="space-y-1 my-auto">
+                                    <h3 className="text-base sm:text-xl font-black text-white">{announcements[currentBannerIndex].title}</h3>
+                                    <p className="text-xs sm:text-sm text-yellow-50">{announcements[currentBannerIndex].content}</p>
+                                </div>
+                                <div className="flex justify-center items-center gap-1.5 pt-2">
+                                    {announcements.map((_, idx) => (
+                                        <button key={idx} onClick={() => setCurrentBannerIndex(idx)} className={`h-2 rounded-full transition-all ${idx === currentBannerIndex ? 'w-6 bg-yellow-300' : 'w-2 bg-white/40'}`} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'assignments' && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h2 className="text-2xl font-black text-white">{t.assignmentsTitle}</h2>
+                                    {(role === 'Teacher' || role === 'Admin') && (
+                                        <button onClick={() => { setEditingAssignmentId(null); setEditingQuestionIndex(null); setNewAssignmentForm({ titleAr: '', startDate: '2026-10-26T08:00', endDate: '2026-11-02T23:59', questions: [] }); setShowBuilderModal(true); }} className="bg-gradient-to-r from-red-600 to-yellow-500 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs shadow-lg">
+                                            {t.addAssignment}
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="space-y-3">
+                                    {assignments.map(asg => (
+                                        <div key={asg.id} onClick={() => role === 'Student' && handleOpenAssignmentForStudent(asg)} className={`bg-slate-900 rounded-2xl p-4 border border-blue-500/30 shadow-lg flex justify-between items-center ${role === 'Student' ? 'cursor-pointer hover:border-yellow-400' : ''}`}>
+                                            <div>
+                                                <h3 className="text-base font-black text-white">{asg.titleAr} {role === 'Student' && <span className="text-xs text-yellow-400">(اضغط للحل ✍️)</span>}</h3>
+                                                <div className="flex gap-3 mt-1 text-[11px] text-yellow-400 font-bold">
+                                                    <span>🕒 يبدأ: {asg.startDate}</span><span>📌 الأسئلة: {asg.questions?.length || 0}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                                {(role === 'Teacher' || role === 'Admin') && (
+                                                    <>
+                                                        <button onClick={() => handleEditAssignment(asg)} className="bg-amber-500/20 text-amber-300 p-1.5 rounded-lg text-xs">✏️</button>
+                                                        <button onClick={() => handleDeleteAssignment(asg.id)} className="bg-red-600/20 text-red-300 p-1.5 rounded-lg text-xs">✕</button>
+                                                    </>
+                                                )}
+                                                {role === 'Student' && <button onClick={() => handleOpenAssignmentForStudent(asg)} className="bg-yellow-500 text-slate-950 px-3 py-1 rounded-lg text-xs font-black">بدء الحل ✍️</button>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'grading' && (
+                            <div className="space-y-4">
+                                <h2 className="text-2xl font-black text-white">{t.navGrading}</h2>
+                                <div className="bg-slate-900 rounded-2xl border border-blue-500/30 overflow-x-auto shadow-xl">
+                                    <table className="w-full text-right text-xs">
+                                        <thead className="bg-slate-950 text-yellow-400 font-black border-b border-slate-800">
+                                            <tr>
+                                                <th className="p-3.5">{t.studentName}</th><th className="p-3.5">{t.schoolYear}</th><th className="p-3.5">{t.subjectCol}</th><th className="p-3.5">{t.participation}</th><th className="p-3.5">{t.assignmentsCol}</th><th className="p-3.5">{t.behavior}</th><th className="p-3.5">{t.termExam}</th><th className="p-3.5">{t.total}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800/60 font-bold">
+                                            {filteredStudents.map((st) => (
+                                                <tr key={st.id} className="hover:bg-slate-850">
+                                                    <td className="p-3.5 text-white font-black">{st.name}</td>
+                                                    <td className="p-3.5 text-blue-300">{st.grade}</td>
+                                                    <td className="p-3.5 text-amber-300">{st.subject}</td>
+                                                    <td className="p-3.5 text-yellow-400">{st.participation}</td>
+                                                    <td className="p-3.5 text-yellow-400">{st.assignments}</td>
+                                                    <td className="p-3.5 text-yellow-400">{st.behavior}</td>
+                                                    <td className="p-3.5 text-yellow-400">{st.termExam}</td>
+                                                    <td className="p-3.5 text-emerald-400 font-black">{st.participation + st.assignments + st.behavior + st.termExam} / 100</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'subjects' && (
+                            <div className="space-y-4">
+                                <h2 className="text-2xl font-black text-white">{t.navSubjects}</h2>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    {subjects.map((sub) => (
+                                        <div key={sub.id} className={`bg-gradient-to-br ${sub.color} rounded-2xl p-5 shadow-lg space-y-2`}>
+                                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-md border ${sub.badgeColor}`}>{sub.code}</span>
+                                            <h4 className="text-lg font-black text-white">{sub.nameAr}</h4>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'announcements' && (
+                            <div className="space-y-4">
+                                <h2 className="text-2xl font-black text-white">{t.announcementsTitle}</h2>
+                                {announcements.map(ann => (
+                                    <div key={ann.id} className="bg-slate-900 rounded-2xl p-5 border border-blue-500/30 space-y-2">
+                                        <h3 className="text-lg font-black text-white">{ann.title}</h3>
+                                        <p className="text-xs text-yellow-100">{ann.content}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Assignment Solver Modal */}
+                    {activeStudentAssignment && (
+                        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3">
+                            <div className="bg-slate-900 rounded-2xl max-w-2xl w-full p-5 space-y-4 border border-yellow-500/40 max-h-[90vh] overflow-y-auto">
+                                <h3 className="text-lg font-black text-yellow-400">{activeStudentAssignment.titleAr}</h3>
+                                {activeStudentAssignment.questions.map((q, qIndex) => (
+                                    <div key={q.id || qIndex} className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                                        <h4 className="text-xs font-black text-white">{qIndex + 1}. {q.textAr}</h4>
+                                        {q.type === 'MCQ' && q.optionsAr?.map((opt, optIndex) => (
+                                            <label key={optIndex} className="flex items-center gap-2 bg-slate-900 p-2 rounded-lg text-xs font-bold cursor-pointer">
+                                                <input type="radio" name={`q_${q.id || qIndex}`} checked={studentAnswers[q.id || qIndex] === optIndex} onChange={() => setStudentAnswers({ ...studentAnswers, [q.id || qIndex]: optIndex })} />
+                                                <span>{opt}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                ))}
+                                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                    <button onClick={() => setActiveStudentAssignment(null)} className="px-4 py-2 bg-slate-800 text-xs font-bold rounded-xl">إلغاء</button>
+                                    <button onClick={handleSubmitStudentAssignment} className="px-5 py-2 bg-yellow-500 text-slate-950 text-xs font-black rounded-xl">تسليم الواجب 🚀</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Assignment Builder Modal */}
+                    {showBuilderModal && (
+                        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3">
+                            <div className="bg-slate-900 rounded-2xl max-w-2xl w-full p-5 space-y-4 border border-yellow-500/40 max-h-[90vh] overflow-y-auto">
+                                <h3 className="text-lg font-black text-yellow-400">منشئ الواجبات والأسئلة</h3>
+                                <input type="text" placeholder="عنوان الواجب" value={newAssignmentForm.titleAr} onChange={e => setNewAssignmentForm({ ...newAssignmentForm, titleAr: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => setShowImportModal(true)} className="py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-lg">📥 استيراد من PDF أو نص</button>
+                                    <button onClick={() => setShowAiGenerator(!showAiGenerator)} className="py-2.5 bg-purple-600 text-white font-bold text-xs rounded-lg">🤖 توليد بالذكاء الاصطناعي</button>
+                                </div>
+
+                                {showAiGenerator && (
+                                    <div className="p-3 bg-slate-950 rounded-xl border border-purple-500/30 space-y-2">
+                                        <textarea rows={2} placeholder="اكتب برومبت التوليد..." value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} className="w-full p-2 bg-slate-900 text-xs text-white rounded" />
+                                        <button disabled={isAiGenerating} onClick={handleGenerateAiQuestions} className="w-full py-2 bg-purple-600 text-white font-bold text-xs rounded">{isAiGenerating ? 'جاري التوليد...' : 'توليد الأسئلة'}</button>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <h4 className="text-xs font-bold text-blue-300">الأسئلة ({newAssignmentForm.questions.length}):</h4>
+                                    {newAssignmentForm.questions.map((q, idx) => (
+                                        <div key={idx} className="bg-slate-950 p-2.5 rounded-lg flex justify-between items-center text-xs">
+                                            <span>{idx + 1}. {q.textAr}</span>
+                                            <button onClick={() => setNewAssignmentForm({ ...newAssignmentForm, questions: newAssignmentForm.questions.filter((_, i) => i !== idx) })} className="text-red-400">✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                    <button onClick={() => setShowBuilderModal(false)} className="px-4 py-2 bg-slate-800 text-xs font-bold rounded-xl">إلغاء</button>
+                                    <button onClick={handleSaveAssignment} className="px-5 py-2 bg-yellow-500 text-slate-950 text-xs font-black rounded-xl">حفظ ونشر الواجب</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PDF / Document Import Modal */}
+                    {showImportModal && (
+                        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-3">
+                            <div className="bg-slate-900 rounded-2xl max-w-3xl w-full p-6 space-y-5 border border-emerald-500/50 max-h-[95vh] overflow-y-auto">
+                                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                                    <h3 className="text-lg font-black text-emerald-400">استيراد الأسئلة من PDF</h3>
+                                    <button onClick={() => { setShowImportModal(false); setImportReviewMode(false); }} className="text-slate-400">✕</button>
+                                </div>
+
+                                {!importReviewMode ? (
+                                    <div className="space-y-4">
+                                        <div className="bg-slate-950 p-4 rounded-2xl border border-dashed border-emerald-500/40 text-center space-y-2">
+                                            <input type="file" accept=".pdf,.txt" onChange={e => setImportFile(e.target.files[0])} className="w-full text-xs text-slate-300 file:bg-emerald-600 file:text-white file:rounded-xl file:px-4 file:py-2 file:border-0 cursor-pointer" />
+                                            {importFile && <p className="text-xs text-yellow-400 font-bold">📎 الملف المرفق: {importFile.name}</p>}
+                                        </div>
+                                        <textarea rows={4} placeholder="أو انسخ والصق نص الأسئلة هنا..." value={importText} onChange={e => setImportText(e.target.value)} className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white" />
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => setShowImportModal(false)} className="px-4 py-2 bg-slate-800 text-xs rounded-xl">إلغاء</button>
+                                            <button disabled={isImporting} onClick={handleProcessImportDocument} className="px-5 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl">
+                                                {isImporting ? '⏳ جاري استخراج النص وقراءة الأسئلة...' : 'معالجة واستخراج الأسئلة 🔍'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <h4 className="text-xs font-black text-emerald-300">مراجعة الأسئلة المستخرجة ({extractedImportQuestions.length}):</h4>
+                                        <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+                                            {extractedImportQuestions.map((q, qIndex) => (
+                                                <div key={q.id || qIndex} className="bg-slate-950 p-3 rounded-xl border border-emerald-500/30 space-y-2 text-xs">
+                                                    <div className="flex justify-between">
+                                                        <label className="flex items-center gap-2">
+                                                            <input type="checkbox" checked={q.selected} onChange={e => { const u = [...extractedImportQuestions]; u[qIndex].selected = e.target.checked; setExtractedImportQuestions(u); }} />
+                                                            <span className="font-black text-emerald-400">سؤال {qIndex + 1} [{q.type}]</span>
+                                                        </label>
+                                                        <button onClick={() => setExtractedImportQuestions(extractedImportQuestions.filter((_, i) => i !== qIndex))} className="text-red-400">حذف</button>
+                                                    </div>
+                                                    <input type="text" value={q.textAr} onChange={e => { const u = [...extractedImportQuestions]; u[qIndex].textAr = e.target.value; setExtractedImportQuestions(u); }} className="w-full p-2 bg-slate-900 border border-slate-800 rounded text-white" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                                            <button onClick={() => setImportReviewMode(false)} className="px-4 py-2 bg-slate-800 text-xs rounded-xl">السابق</button>
+                                            <button onClick={handleImportApprovedQuestions} className="px-5 py-2 bg-emerald-600 text-white text-xs font-black rounded-xl">استيراد الأسئلة المحددة</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
