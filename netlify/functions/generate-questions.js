@@ -1,5 +1,3 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
         return { 
@@ -21,9 +19,6 @@ exports.handler = async (event, context) => {
         const promptText = body.prompt || '';
         const counts = body.counts || { mcq: 2, tf: 2, fill: 2, essay: 1, match: 1 };
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
         const systemInstruction = `
 أنت معلم محترف ومساعد ذكي لإنشاء الأسئلة التعليمية.
 بناءً على النص أو الموضوع التالي:
@@ -36,7 +31,7 @@ exports.handler = async (event, context) => {
 - سؤال مقالي (essay): ${counts.essay || 0} أسئلة
 - توصيل / مزاوجة (match): ${counts.match || 0} أسئلة
 
-يجب أن يعيد الناتج مصفوفة JSON فقط بدون أي نصوص شارحة أو علامات Markdown خارج الكود، بالهيكل التالي:
+يجب أن يعيد الناتج مصفوفة JSON فقط بدون أي نصوص شارحة أو علامات Markdown، بالهيكل التالي:
 [
   {
     "type": "mcq",
@@ -75,10 +70,25 @@ exports.handler = async (event, context) => {
 ]
 `;
 
-        const result = await model.generateContent(systemInstruction);
-        const responseText = await result.response.text();
-        
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+        const apiResponse = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: systemInstruction }] }]
+            })
+        });
+
+        const apiData = await apiResponse.json();
+
+        if (!apiResponse.ok) {
+            throw new Error(apiData.error?.message || 'خطأ في الاستجابة من Gemini API');
+        }
+
+        const responseText = apiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+
         if (!jsonMatch) {
             throw new Error('لم يتم استرجاع صيغة أسئلة سليمة من الذكاء الاصطناعي');
         }
@@ -99,4 +109,3 @@ exports.handler = async (event, context) => {
         };
     }
 };
-
