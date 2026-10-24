@@ -1,3 +1,5 @@
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
         return { 
@@ -11,87 +13,70 @@ exports.handler = async (event, context) => {
         if (!apiKey) {
             return { 
                 statusCode: 500, 
-                body: JSON.stringify({ error: 'مفتاح GEMINI_API_KEY غير معرف في Netlify' }) 
+                body: JSON.stringify({ error: 'مفتاح GEMINI_API_KEY غير معرف في إعدادات Netlify' }) 
             };
         }
 
         const body = JSON.parse(event.body || '{}');
         const promptText = body.prompt || '';
-        const counts = body.counts || { mcq: 2, tf: 2, fill: 2, essay: 1, match: 1 };
+        const rawText = body.rawText || '';
+        const counts = body.counts || { MCQ: 2, TF: 1, SHORT: 0, ESSAY: 0, MATCHING: 0 };
 
-        const systemInstruction = `
-أنت معلم محترف ومساعد ذكي لإنشاء الأسئلة التعليمية.
-بناءً على النص أو الموضوع التالي:
-"${promptText}"
+        const genAI = new GoogleGenerativeAI(apiKey);
+        // استخدام نموذج gemini-1.5-flash المدعوم رسمياً لتفادي خطأ v1beta
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-قم بتوليد الأسئلة أوتوماتيكياً وفق الأعداد المطلوبة التالية:
-- اختيار من متعدد (mcq): ${counts.mcq || 0} أسئلة
-- صح أم خطأ (tf): ${counts.tf || 0} أسئلة
-- أكمل الفراغ (fill): ${counts.fill || 0} أسئلة
-- سؤال مقالي (essay): ${counts.essay || 0} أسئلة
-- توصيل / مزاوجة (match): ${counts.match || 0} أسئلة
+        let systemInstruction = '';
 
-يجب أن يعيد الناتج مصفوفة JSON فقط بدون أي نصوص شارحة أو علامات Markdown، بالهيكل التالي:
+        if (rawText) {
+            systemInstruction = `
+أنت مساعد تعليمي ذكي ومحلل نصوص. قم بتحليل النص التالي المستخرج من مستند أو PDF وقم بتحويله إلى مصفوفة أسئلة JSON فقط بدون أي نصوص أو علامات markdown إضافية خارج الكود.
+النص:
+"${rawText}"
+
+الهيكل المطلوب:
 [
   {
-    "type": "mcq",
-    "question": "نص السؤال هنا",
-    "options": ["خيار 1", "خيار 2", "خيار 3", "خيار 4"],
-    "answer": 0,
-    "points": 1
-  },
-  {
-    "type": "tf",
-    "question": "نص الجملة هنا",
-    "answer": true,
-    "points": 1
-  },
-  {
-    "type": "fill",
-    "question": "نص السؤال مع مكان ناقص",
-    "answer": "الكلمة الصحيحة",
-    "points": 1
-  },
-  {
-    "type": "essay",
-    "question": "السؤال المقالي",
-    "answer": "الإجابة النموذجية",
-    "points": 2
-  },
-  {
-    "type": "match",
-    "question": "صل بين العمودين فيما يلي:",
-    "pairs": [
-      {"left": "عنصر أ", "right": "مقابل أ"},
-      {"left": "عنصر ب", "right": "مقابل ب"}
-    ],
-    "points": 2
+    "type": "MCQ",
+    "textAr": "نص السؤال",
+    "optionsAr": ["خيار 1", "خيار 2", "خيار 3", "خيار 4"],
+    "correctOptionIndex": 0
   }
 ]
 `;
+        } else {
+            systemInstruction = `
+أنت معلم محترف ومساعد ذكي لإنشاء الأسئلة التعليمية.
+بناءً على الموضوع أو البرومبت التالي:
+"${promptText}"
 
-        // استخدام نموذج gemini-1.5-pro المدعوم رسمياً
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+قم بتوليد الأسئلة أوتوماتيكياً وفق الأعداد التالية:
+- اختيار من متعدد (MCQ): ${counts.MCQ || 0}
+- صح أو خطأ (TF): ${counts.TF || 0}
 
-        const apiResponse = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: systemInstruction }] }]
-            })
-        });
-
-        const apiData = await apiResponse.json();
-
-        if (!apiResponse.ok) {
-            throw new Error(apiData.error?.message || 'خطأ في الاستجابة من Gemini API');
+يجب أن يعيد الناتج مصفوفة JSON صالحة فقط بدون أي نصوص شارحة أو علامات Markdown خارج الكود، بالهيكل التالي:
+[
+  {
+    "type": "MCQ",
+    "textAr": "نص السؤال",
+    "optionsAr": ["خيار 1", "خيار 2", "خيار 3", "خيار 4"],
+    "correctOptionIndex": 0
+  },
+  {
+    "type": "TF",
+    "textAr": "نص العبارة",
+    "trueFalseAnswer": true
+  }
+]
+`;
         }
 
-        const responseText = apiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const result = await model.generateContent(systemInstruction);
+        const responseText = await result.response.text();
+        
         const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-
         if (!jsonMatch) {
-            throw new Error('لم يتم استرجاع صيغة أسئلة سليمة من الذكاء الاصطناعي');
+            throw new Error('لم يتم استرجاع صيغة JSON سليمة من الذكاء الاصطناعي');
         }
 
         const questions = JSON.parse(jsonMatch[0]);
@@ -103,10 +88,11 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
+        console.error('Gemini Function Error:', error);
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: error.message || 'حدث خطأ في معالجة الأسئلة' })
+            body: JSON.stringify({ error: error.message || 'حدث خطأ في معالجة الطلب عبر الخادم' })
         };
     }
 };
