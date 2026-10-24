@@ -65,7 +65,8 @@ exports.handler = async (event, context) => {
 `;
         }
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // استخدام الإصدار المستقر v1 لضمان عمل نموذج gemini-1.5-flash بدون أي أخطاء
+        const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const apiResponse = await fetch(apiUrl, {
             method: 'POST',
